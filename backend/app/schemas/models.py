@@ -1,6 +1,8 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, TypedDict, Literal, Tuple, Dict, Any
 
+from pyparsing import Opt
+
 class JobData(BaseModel):
     title: str = Field(default="")
     job_type: str = Field(default="")
@@ -12,6 +14,8 @@ class JobData(BaseModel):
     source: str = Field(default="careerjet")
 
 class AgentState(TypedDict):
+    session_id: str
+    # user_id: Optional[str]
     query: str
     data: Optional[List[JobData]]
     validated: bool

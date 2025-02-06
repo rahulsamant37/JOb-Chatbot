@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from careerjet_api import CareerjetAPIClient
+from careerjet_api_client import CareerjetAPIClient
 from dotenv import load_dotenv
 import os
 from typing import Dict, Any
@@ -9,9 +9,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 load_dotenv()
+# affid=os.getenv("CAREERJET_AFFID")
+
 
 class CareerjetClient:
-    def __init__(self, affid=os.getenv("CAREERJET_AFFID")):
+    def __init__(self, affid='cd918e610ecfbcd6cc50f9527541794c'):
         self.cj_client = CareerjetAPIClient("en_US")
         self.affid = affid
 

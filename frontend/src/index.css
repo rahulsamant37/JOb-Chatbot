@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+/* @tailwind base;
+@tailwind components;
+@tailwind utilities; */
+/* @theme {
+  --color-primary: #1d4ed8;
+  --color-secondary: #9333ea;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}
+
+@layer utilities {
+  .bg-primary {
+    background-color: var(--color-primary);
+  }
+  .bg-secondary {
+    background-color: var(--color-secondary);
+  }
+} */
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scroll {
+    scrollbar-width: thin; /* For Firefox */
+  }
+  .scroll::-webkit-scrollbar {
+    width: 3px;
+  }
+  .scroll::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.78);
+    border-radius: 4px;
+  }
+}
