@@ -1,7 +1,4 @@
-<<<<<<< Updated upstream
-=======
 import logging
->>>>>>> Stashed changes
 import torch
 from typing import List, Optional, Dict, Any
 from datetime import datetime
@@ -25,11 +22,7 @@ from app.tools.CareerJetAPI import CareerjetClient
 from app.tools.Green_house import GreenhouseJobClient
 from app.tools.Jooble import JoobleClient
 from app.utils.common import QueryProcessor
-<<<<<<< Updated upstream
-import logging
-=======
 from app.utils.session_memory import memory, save_session_state
->>>>>>> Stashed changes
 
 logger = logging.getLogger(__name__)
 
@@ -324,11 +317,8 @@ def create_job_search_agent():
                 "message": "No valid job listings found",
                 "data": None
             }
-<<<<<<< Updated upstream
-=======
         # Save session state
         save_session_state(state.get("session_id"), state)
->>>>>>> Stashed changes
         return state
 
     workflow.add_node("validator", validator_node)
@@ -348,14 +338,5 @@ def create_job_search_agent():
             return "web_search"
         return END
 
-<<<<<<< Updated upstream
-    workflow.add_conditional_edges(
-        "validator",
-        next_step
-    )
-
-    return workflow.compile()
-=======
     workflow.add_conditional_edges("validator", next_step)
     return workflow.compile(checkpointer=memory)
->>>>>>> Stashed changes
