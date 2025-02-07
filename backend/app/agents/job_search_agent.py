@@ -1,4 +1,3 @@
-from logging import config
 import torch
 from transformers import pipeline
 from langgraph.graph import StateGraph, END, START
@@ -12,7 +11,6 @@ from app.config.settings import settings
 from app.schemas.models import JobData, AgentState
 from app.tools.CareerJetAPI import CareerjetClient
 from app.utils.common import QueryProcessor
-from app.utils.session_memory import memory, save_session_state
 import logging
 
 logger = logging.getLogger(__name__)
@@ -153,7 +151,6 @@ def create_job_search_agent():
     workflow = StateGraph(AgentState)
     
     workflow.add_node("api_fetcher", agent.api_fetcher)
-    # RAG   
     workflow.add_node("web_search", agent.web_search)
     workflow.add_node("general_search", agent.general_search)
     
@@ -179,10 +176,6 @@ def create_job_search_agent():
                 "message": "No valid job listings found",
                 "data": None
             }
-            
-        # DB save;
-        save_session_state(state["session_id"], state)
-            
         return state
 
     workflow.add_node("validator", validator_node)
@@ -209,4 +202,4 @@ def create_job_search_agent():
         next_step
     )
 
-    return workflow.compile(checkpointer=memory)
+    return workflow.compile()
