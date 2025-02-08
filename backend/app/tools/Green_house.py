@@ -11,7 +11,7 @@ class GreenhouseJobClient:
     """
     BASE_URL = "https://boards-api.greenhouse.io/v1/boards/{company}/jobs"
 
-    def __init__(self, timeout: int = 10):
+    def __init__(self, timeout: int = 6):
         """
         Initialize Greenhouse Job Client.
         

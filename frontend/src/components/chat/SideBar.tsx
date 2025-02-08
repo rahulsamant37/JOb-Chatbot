@@ -2,8 +2,8 @@ import { useSidebarContext } from "../../context/SideBarContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useNavigate } from "react-router-dom";
 
-import { FaPlus } from "react-icons/fa";
-import { MdOutlineHistory } from "react-icons/md";
+// import { FaPlus } from "react-icons/fa";
+// import { MdOutlineHistory } from "react-icons/md";
 import ToggleIcon from "../../assets/icons/toggle-button.svg";
 import UpcomingIcon from "../../assets/icons/upcoming-icon-sidemenu.svg";
 
@@ -84,7 +84,7 @@ const SideBar = () => {
           Upcoming
           <img src={UpcomingIcon} alt="" className="h-6 " />
         </button>
-
+{/* 
         <button
           className="w-full p-2.5 px-4 my-4 text-left text-s rounded-xl flex justify-between items-center cursor-pointer"
           style={{
@@ -94,7 +94,7 @@ const SideBar = () => {
         >
           New Chat
           <FaPlus />
-        </button>
+        </button> */}
       </div>
 
       <div
@@ -125,7 +125,7 @@ const SideBar = () => {
           sideBarVisible ? "opacity-100" : "hidden"
         } transition-opacity`}
       >
-        <div className="mt-4">
+        {/* <div className="mt-4">
           <p
             className="text-xs mb-2 flex items-end"
             style={{ color: currentTheme.secondaryFont }}
@@ -144,7 +144,7 @@ const SideBar = () => {
           >
             Chat History...
           </button>
-        </div>
+        </div> */}
       </div>
     </div>
   );

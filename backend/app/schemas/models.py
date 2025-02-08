@@ -13,6 +13,19 @@ class JobData(BaseModel):
     url: Optional[str] = None
     source: str = Field(default="careerjet")
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert JobData to dictionary format"""
+        return {
+            "title": self.title,
+            "job_type": self.job_type,
+            "description": self.description,
+            "posted_date": self.posted_date,
+            "company": self.company,
+            "location": self.location,
+            "url": self.url,
+            "source": self.source
+        }
+
 class AgentState(TypedDict):
     session_id: str
     # user_id: Optional[str]
@@ -50,8 +63,9 @@ class QueryComponents(BaseModel):
 
 class ChatRequest(BaseModel):
     query: str
-    chat_history: List[dict] = []
-    pagesize: int = 10
+    pagesize: int = Field(default=6)
+    session_id: Optional[str] = None
+    chat_history: Optional[List[Dict[str, Any]]] = []
 
 class ChatResponse(BaseModel):
     response: dict

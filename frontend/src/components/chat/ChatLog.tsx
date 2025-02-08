@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTheme } from "../../context/ThemeContext";
 import JobCards from "./cards/JobCards";
+import TypingAnimation from "../TypingAnimation";
 
 const ChatLog = () => {
   const { currentTheme } = useTheme();
@@ -8,8 +9,12 @@ const ChatLog = () => {
     { text: string; sender: "user" | "ai"; JobData?: any[] }[]
   >([]);
 
+  const [isTyping, setIsTyping] = useState(false);
+
   const handleNewMessage = (message: string) => {
     setMessages([...messages, { text: message, sender: "user" }]);
+    setIsTyping(true);
+
 
     // Async: use this "message to send request of query to agent/server here... "
     // example testing here....
@@ -22,8 +27,10 @@ const ChatLog = () => {
           { title: "Data Scientist", company: "Meta", location: "New York" },
         ],
       };
+
+      setIsTyping(false);
       setMessages((prev) => [...prev, simulatedResponse]);
-    }, 1000);
+    }, 500);
   };
 
   return (
@@ -41,12 +48,21 @@ const ChatLog = () => {
             msg.sender === "user" ? "text-right" : "text-left"
           }`}
         >
-          <div className={`p-3 rounded-lg inline-block`}>{msg.text}</div>
-          {msg.sender === "ai" && msg.jobData && (
-            <JobCards jobs={msg.jobData} />
-          )}
+          <div className="p-3 rounded-lg inline-block">
+            {msg.sender === "ai" ? (
+              <TypingAnimation text={msg.text} speed={30} />
+            ) : (
+              msg.text
+            )}
+          </div>
+          {msg.sender === "ai" && msg.JobData && <JobCards jobs={msg.JobData} />}
         </div>
       ))}
+
+       {/* Show "AI is typing..." while processing */}
+       {isTyping && (
+        <div className="text-left text-sm italic text-gray-400">AI is typing...</div>
+      )}
     </div>
   );
 };

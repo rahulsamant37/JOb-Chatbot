@@ -10,19 +10,13 @@ from langgraph.graph import StateGraph, END, START
 from langchain_community.tools import DuckDuckGoSearchRun
 
 from app.config.settings import settings
-try:
-    from app.config.settings import JobSearchConfig
-except ImportError:
-    class JobSearchConfig:
-        DEFAULT_PAGESIZE = 10
-        MAX_SOURCES = 3
+from app.config.settings import JobSearchConfig
 
 from app.schemas.models import JobData, AgentState
 from app.tools.CareerJetAPI import CareerjetClient
 from app.tools.Green_house import GreenhouseJobClient
 from app.tools.Jooble import JoobleClient
 from app.utils.common import QueryProcessor
-from app.utils.session_memory import memory, save_session_state
 
 logger = logging.getLogger(__name__)
 
@@ -38,20 +32,53 @@ class JobSearchAgent:
         self.greenhouse_client = GreenhouseJobClient()
         self.jooble_client = JoobleClient()
         self.duckduckgo = DuckDuckGoSearchRun()
+        self.query_processor = QueryProcessor()
         # Optional QA pipeline initialization
-        self.qa_pipeline = self._init_qa_pipeline()
+        self.qa_pipeline = pipeline(
+            "question-answering",
+            model="deepset/roberta-base-squad2",
+            device="cuda:0" if torch.cuda.is_available() else "cpu"
+        )
 
-    def _init_qa_pipeline(self):
-        """Initialize Question-Answering pipeline"""
+    def general_search(self, state: AgentState) -> AgentState:
+        """Handle non-job related queries using DuckDuckGo"""
         try:
-            return pipeline(
-                "question-answering",
-                model="deepset/roberta-base-squad2",
-                device="cuda:0" if torch.cuda.is_available() else "cpu"
-            )
+            results = self.duckduckgo.run(state['query'])
+            if results:
+                state['response'] = {
+                    "status": "success",
+                    "message": "General search results",
+                    "data": results.split('\n'),
+                    "source": "duckduckgo"
+                }
+            else:
+                state['response'] = {
+                    "status": "error",
+                    "message": "No results found",
+                    "data": None,
+                    "source": "duckduckgo"
+                }
         except Exception as e:
-            self.logger.warning(f"QA Pipeline init failed: {e}")
-            return None
+            logger.error(f"General search error: {str(e)}")
+            state['response'] = {
+                "status": "error",
+                "message": f"Search error: {str(e)}",
+                "data": None,
+                "source": "duckduckgo"
+            }
+        return state
+    
+    def validate_job_data(self, jobs_data: Optional[List[JobData]]) -> bool:
+        """Validate job data"""
+        if not jobs_data:
+            return False
+        
+        required_fields = ['title', 'company']
+        valid_jobs = [
+            job for job in jobs_data
+            if all(getattr(job, field) for field in required_fields)
+        ]
+        return len(valid_jobs) > 0
 
     def search_jobs(
         self, 
@@ -73,8 +100,7 @@ class JobSearchAgent:
         search_methods = [
             (self._search_careerjet, "careerjet"),
             (self._search_greenhouse, "greenhouse"),
-            (self._search_jooble, "jooble"),
-            (self._search_duckduckgo, "duckduckgo")
+            (self._search_jooble, "jooble")
         ]
         for search_method, source_name in search_methods:
             if len(results['sources_used']) >= max_sources:
@@ -116,24 +142,23 @@ class JobSearchAgent:
             return datetime.now()
 
     def _search_careerjet(self, query: str, location: Optional[str], job_type: Optional[str]) -> List[JobData]:
-        """
-        Search jobs using Careerjet API via CareerjetClient.
-        """
+        """Search jobs using Careerjet API"""
         try:
-            results = self.careerjet_client.search_jobs(query=query, location=location, job_type=job_type)
+            results = self.careerjet_client.search_jobs(keywords=query, location=location)
             jobs = []
-            for job in results:
-                job_data = JobData(
-                    title=job.get("title", "Unknown Title"),
-                    company=job.get("company", "Unknown Company"),
-                    location=job.get("location", "Not Specified"),
-                    url=job.get("url", ""),
-                    posted_date=job.get("posted_date", datetime.now().strftime("%Y-%m-%d")),
-                    source="careerjet",
-                    job_type=job.get("job_type", ""),
-                    description=job.get("description", "")
-                )
-                jobs.append(job_data)
+            if results and isinstance(results, dict):
+                for job in results.get('jobs', []):
+                    job_data = JobData(
+                        title=job.get("title", "Unknown Title"),
+                        company=job.get("company", "Unknown Company"),
+                        location=job.get("location", "Not Specified"),
+                        url=job.get("url", ""),
+                        posted_date=job.get("date", datetime.now().strftime("%Y-%m-%d")),
+                        source="careerjet",
+                        job_type=job_type or "",
+                        description=job.get("description", "")
+                    )
+                    jobs.append(job_data)
             return jobs
         except Exception as e:
             self.logger.error(f"Careerjet search error: {e}")
@@ -189,22 +214,22 @@ class JobSearchAgent:
             return []
 
     def _search_duckduckgo(self, query: str, location: Optional[str], job_type: Optional[str] = None) -> List[JobData]:
-        """
-        Search jobs using DuckDuckGo via DuckDuckGoSearchRun.
-        """
+        """Search jobs using DuckDuckGo"""
         try:
-            result = self.duckduckgo.run(query=query)
+            # Fix missing tool_input parameter
+            search_query = f"{query} jobs {location if location else ''}"
+            result = self.duckduckgo.run(tool_input=search_query)
             jobs = []
-            if result and isinstance(result, dict) and "AbstractText" in result:
+            if result and isinstance(result, str):  # DuckDuckGo returns string
                 job_data = JobData(
-                    title=result.get("Heading", "Unknown Title"),
-                    company="DuckDuckGo",
+                    title=query,
+                    company="Search Result",
                     location=location or "Not Specified",
-                    url=result.get("AbstractURL", ""),
+                    url="",
                     posted_date=datetime.now().strftime("%Y-%m-%d"),
                     source="duckduckgo",
                     job_type="",
-                    description=result.get("AbstractText", "")
+                    description=result
                 )
                 jobs.append(job_data)
             return jobs
@@ -213,130 +238,198 @@ class JobSearchAgent:
             return []
 
     def api_fetcher(self, state: AgentState) -> AgentState:
-        """
-        Fetch job data from multiple sources
-        """
-        state.setdefault('is_job_query', True)
+        """Fetch job data from multiple sources"""
+        # Check if query is job-related using QueryProcessor
+        is_job_related = self.query_processor.is_job_related_query(state.get('query', ''))
+        state['is_job_query'] = is_job_related
+
+
         state.setdefault('api_exhausted', False)
         state.setdefault('data', [])
+
+        if not is_job_related:
+            state['api_exhausted'] = True
+            return state
+
         try:
+            # Extract location if present in query
+            location = None
+            if " in " in state['query']:
+                query_parts = state['query'].split(" in ")
+                query = query_parts[0]
+                location = query_parts[1]
+            else:
+                query = state['query']
+    
+            # Call search_jobs with extracted parameters
             search_results = self.search_jobs(
-                query=state.get('query', ''),
-                location=state.get('location'),
-                job_type=state.get('job_type')
+                query=query,
+                location=location,
+                job_type=None,  # Could be extracted from query if needed
+                max_sources=3  # Use all available sources
             )
-            state['data'] = search_results['jobs']
-            state['api_exhausted'] = len(search_results['jobs']) == 0
-            state['sources_used'] = search_results['sources_used']
+    
+            if search_results and isinstance(search_results, dict):
+                state['data'] = search_results.get('jobs', [])
+                state['api_exhausted'] = len(state['data']) == 0
+                state['sources_used'] = search_results.get('sources_used', [])
+                
+                # Log success for debugging
+                self.logger.info(f"Found {len(state['data'])} jobs from {len(state['sources_used'])} sources")
+            else:
+                state['api_exhausted'] = True
+                state['data'] = []
+                self.logger.warning("No results returned from search_jobs")
+    
         except Exception as e:
-            self.logger.error(f"API fetcher error: {e}")
+            self.logger.error(f"API fetcher error: {str(e)}")
             state['api_exhausted'] = True
             state['errors'] = [str(e)]
+    
         return state
 
     def web_search(self, state: AgentState) -> AgentState:
-        """
-        Perform web search as fallback when API sources are exhausted
-        """
-        if not state.get('api_exhausted', False):
-            return state
+        """Search for jobs using DuckDuckGo with enhanced error handling"""
         try:
-            duckduckgo_results = self._search_duckduckgo(
-                query=state.get('query', ''),
-                location=state.get('location')
-            )
-            state['web_search_results'] = duckduckgo_results
-            state.setdefault('data', [])
-            state['data'].extend(duckduckgo_results)
+            query = f"job posting {state['query']}"
+            logger.info(f"Performing web search with query: {query}")
+            
+            results = self.duckduckgo.run(query)
+            if results:
+                state['web_search_results'] = results.split('\n')
+                web_jobs = self.parse_web_search_results(state['web_search_results'])
+                
+                logger.info(f"Found {len(web_jobs)} jobs from web search")
+                
+                if state['data']:
+                    state['data'].extend(web_jobs)
+                else:
+                    state['data'] = web_jobs
+            else:
+                logger.warning("No results from web search")
+
         except Exception as e:
-            self.logger.error(f"Web search error: {e}")
+            logger.error(f"Web search error: {str(e)}")
         return state
 
-    def validate_job_data(self, jobs: List[JobData]) -> List[JobData]:
-        """
-        Validate job data, removing entries with missing critical information
-        """
-        validated_jobs = []
-        for job in jobs:
-            try:
-                validated_job = JobData(
-                    title=job.title or 'Unknown Title',
-                    company=job.company or 'Unknown Company',
-                    location=job.location or 'Not Specified',
-                    url=job.url or '',
-                    source=job.source or 'unknown',
-                    posted_date=job.posted_date or datetime.now().strftime("%Y-%m-%d"),
-                    job_type=job.job_type or "",
-                    description=job.description or ""
+    def parse_web_search_results(self, results: List[str]) -> List[JobData]:
+        """Extract job information from web search results"""
+        jobs = []
+        for result in results:
+            title_match = re.search(r"(?i)(.+?(?=\s*at\s|$))", result)
+            company_match = re.search(r"(?i)at\s+([^|.]+)", result)
+            location_match = re.search(r"(?i)in\s+([^|.]+)", result)
+
+            if title_match:
+                job = JobData(
+                    title=title_match.group(1).strip(),
+                    company=company_match.group(1).strip() if company_match else "",
+                    location=location_match.group(1).strip() if location_match else "",
+                    description=result[:500],
+                    source="web",
+                    posted_date=datetime.now().strftime("%Y-%m-%d")
                 )
-                validated_jobs.append(validated_job)
-            except ValidationError as e:
-                self.logger.warning(f"Job validation failed: {e}")
-        return validated_jobs
+                jobs.append(job)
+        return jobs
 
     def general_search(self, state: AgentState) -> AgentState:
-        """
-        Handle non-job search queries
-        """
-        state['is_job_query'] = False
-        state['response'] = {
-            "status": "not_applicable",
-            "message": "Query does not match job search criteria"
-        }
+        """Handle non-job related queries using DuckDuckGo"""
+        try:
+            results = self.duckduckgo.run(state['query'])
+            if results:
+                # Format response for general queries
+                state['response'] = {
+                    "status": "success",
+                    "message": results,  # Use result directly without splitting
+                    "data": [results],  # Wrap in list for frontend compatibility
+                    "source": "duckduckgo",
+                    "is_job_query": False
+                }
+            else:
+                state['response'] = {
+                    "status": "error",
+                    "message": "Sorry, I couldn't find any relevant information.",
+                    "data": None,
+                    "source": "duckduckgo",
+                    "is_job_query": False
+                }
+        except Exception as e:
+            logger.error(f"General search error: {str(e)}")
+            state['response'] = {
+                "status": "error", 
+                "message": "I encountered an error while searching. Please try again.",
+                "data": None,
+                "source": "duckduckgo",
+                "is_job_query": False
+            }
         return state
 
+
 def create_job_search_agent():
-    """
-    Create and configure the job search workflow
-    """
+    """Create and configure the job search workflow"""
     agent = JobSearchAgent()
     workflow = StateGraph(AgentState)
-    # Register nodes for each stage
+
     workflow.add_node("api_fetcher", agent.api_fetcher)
     workflow.add_node("web_search", agent.web_search)
     workflow.add_node("general_search", agent.general_search)
-    
+
     def validator_node(state: AgentState) -> AgentState:
         """Validate results and prepare response"""
-        if not state.get('is_job_query', True):
-            return agent.general_search(state)
-        # Validate job listings
-        state['data'] = agent.validate_job_data(state.get('data', []))
-        if state['data']:
+        if not state['is_job_query']:
+            if not state.get('response'):
+                state['response'] = {
+                    "status": "success",
+                    "message": "Let me search for that information.",
+                    "data": None,
+                    "is_job_query": False
+                }
+            return state
+            
+        state['validated'] = agent.validate_job_data(state['data'])
+        if state['validated']:
             state['response'] = {
                 "status": "success",
                 "data": state['data'],
+                "message": "Here are some job recommendations:",
+                "is_job_query": True,
                 "metadata": {
-                    "total_jobs": len(state['data']),
+                    "total_jobs": len(state['data']) if state['data'] else 0,
                     "sources": list(set(job.source for job in state['data']))
                 }
             }
-        else:
+        elif state['api_exhausted'] and state.get('web_search_results'):
             state['response'] = {
                 "status": "error",
                 "message": "No valid job listings found",
-                "data": None
+                "data": None,
+                "is_job_query": True
             }
-        # Save session state
-        save_session_state(state.get("session_id"), state)
         return state
-
     workflow.add_node("validator", validator_node)
-    # Define workflow edges
+    # Define edges
     workflow.add_edge(START, "api_fetcher")
     workflow.add_edge("api_fetcher", "validator")
     workflow.add_edge("web_search", "validator")
     workflow.add_edge("general_search", END)
-    
+
     def next_step(state: AgentState) -> str:
         """Determine next step in the workflow"""
-        if not state.get('is_job_query', True):
+        if not state['is_job_query']:
             return "general_search"
-        if state.get('response'):
+            
+        if state.get('response') and state['response']['status'] != 'error':
             return END
-        if state.get('api_exhausted', False) and not state.get('web_search_results'):
+        
+        if state['api_exhausted'] and not state.get('web_search_results'):
             return "web_search"
+            
         return END
 
-    workflow.add_conditional_edges("validator", next_step)
-    return workflow.compile(checkpointer=memory)
+    # Add conditional edges with proper mapping
+    workflow.add_conditional_edges(
+        "validator",
+        next_step
+    )
+
+    return agent, workflow.compile()

@@ -17,7 +17,7 @@ class CareerjetClient:
         self.cj_client = CareerjetAPIClient("en_US")
         self.affid = affid
 
-    def search_jobs(self, keywords, location=None, pagesize=10) -> Dict[str, Any]:
+    def search_jobs(self, keywords, location=None, pagesize=6) -> Dict[str, Any]:
         try:
             search_params = {
                 'keywords': keywords,

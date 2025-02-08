@@ -6,23 +6,22 @@ import { useState, useEffect } from "react";
 const LandingPage = () => {
   const navigate = useNavigate();
 
-  const handleExecution = () => {
-    const isLoggedIn = localStorage.getItem("user");
-    if (isLoggedIn) {
-      navigate("/chat");
-    } else {
-      navigate("/signup");
-    }
-  };
+  // const handleExecution = () => {
+  //   const isLoggedIn = localStorage.getItem("user");
+  //   if (isLoggedIn) {
+  //     navigate("/chat");
+  //   } else {
+  //     navigate("/signup");
+  //   }
+  // };
 
   // BG Image Temporary...
-  const [bgImage, setBgImage] = useState(
-    window.innerWidth >= 1024 ? `url(${BGImage})` : "none"
-  );
+  const getBgImage = () => (window.innerWidth >= 1024 ? `url(${BGImage})` : "none");
+  const [bgImage, setBgImage] = useState(getBgImage());
 
   useEffect(() => {
     const handleResize = () => {
-      setBgImage(window.innerWidth >= 1024 ? `url(${BGImage})` : "none");
+      setBgImage(getBgImage());
     };
 
     window.addEventListener("resize", handleResize);
@@ -52,10 +51,10 @@ const LandingPage = () => {
         </button>
       </Link> */}
       <button
-        onClick={handleExecution}
+        onClick={() => navigate("/chat")}
         className="bg-blue-600 text-white px-6 py-3 rounded-xl text-lg font-semibold hover:bg-blue-700 transition cursor-pointer"
       >
-        Start to Execute →
+        Let's Start →
       </button>
     </div>
   );

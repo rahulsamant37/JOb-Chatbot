@@ -8,8 +8,8 @@ import LandingPage from "./pages/LandingPage";
 import FeaturesPage from "./pages/FeaturesPage";
 import PricingPage from "./pages/PricingPage";
 
-import SignUpPage from "./pages/SignUpPage";
-import LogInPage from "./pages/LogInPage";
+// import SignUpPage from "./pages/SignUpPage";
+// import LogInPage from "./pages/LogInPage";
 
 import ChatUI from "./pages/ChatUI";
 
@@ -20,8 +20,8 @@ function App() {
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/signup" element={<SignUpPage />} />
-            <Route path="/login" element={<LogInPage />} />
+            {/* <Route path="/signup" element={<SignUpPage />} /> */}
+            {/* <Route path="/login" element={<LogInPage />} /> */}
             <Route path="/features" element={<FeaturesPage />} />
             <Route path="/pricing" element={<PricingPage />} />
           </Route>
