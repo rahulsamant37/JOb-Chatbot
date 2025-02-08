@@ -1,4 +1,3 @@
-import { useTheme } from "../context/ThemeContext";
 import TopSection from "../components/chat/TopSection";
 import MiddleSection from "../components/chat/MiddleSection";
 import BottomSection from "../components/chat/BottomSection";

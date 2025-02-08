@@ -1,6 +1,5 @@
 import { CiLocationOn } from "react-icons/ci";
-import { MdDateRange, MdOutlineUpdate } from "react-icons/md";
-import { FaMoneyBill } from "react-icons/fa";
+import { MdOutlineUpdate } from "react-icons/md";
 import { FaBuilding } from "react-icons/fa";
 import { useTheme } from "../../../context/ThemeContext";
 

@@ -1,14 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect,useRef } from "react";
 import { useTheme } from "../../context/ThemeContext";
 import { FaPaperPlane } from "react-icons/fa";
 import XzayognLogo from "../../assets/icons/xzayogn-logo.svg";
-import JobCard from "./cards/JobCard";
+import ChatMessage from "./ChatMessage";
 
-interface ChatMessage {
-  user: string; //'ai' | 'user'
-  message: string; // 'ai-query' | 'user-query'
-  jobData?: any;
-}
 
 const MiddleSection = () => {
   const { theme, currentTheme } = useTheme();
@@ -16,12 +11,33 @@ const MiddleSection = () => {
   // const [message, setMessage] = useState("");
   const [chatLog, setChatLog] = useState<ChatMessage[]>([]);
   const [isChatLogEmpty, setIsChatLogEmpty] = useState<boolean>(true);
+  const chatLogRef = useRef<HTMLDivElement>(null); // Add ref for chat container
 
   const API_URL = "http://localhost:8000/search"; // server end-point
 
   useEffect(() => {
     setIsChatLogEmpty(chatLog.length === 0);
   });
+
+  // Add scroll effect
+  useEffect(() => {
+    if (chatLogRef.current) {
+      // Scroll to bottom with smooth behavior
+      chatLogRef.current.scrollTo({
+        top: chatLogRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, [chatLog]); // Trigger when chatLog changes
+
+
+  const scrollToBottom = () => {
+    if(chatLogRef.current){
+      chatLogRef.current.scrollTo({
+        top:chatLogRef.current.scrollHeight,
+         behavior: "smooth" });
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -164,11 +180,16 @@ const MiddleSection = () => {
       {/* CHAT LOG WINDOW */}
       {!isChatLogEmpty && (
         <div
+        ref={chatLogRef}
           className="mt-0 w-full max-w-[822px] h-full overflow-y-auto  no-scrollbar lg:mr-[50px]"
           style={{ maxHeight: "75vh", minHeight: "200px" }}
         >
           {chatLog.map((message, index) => (
-            <ChatMessage key={index} {...message} />
+            <ChatMessage 
+            key={index} 
+            {...message}
+            onAnimationUpdate={scrollToBottom}
+             />
           ))}
         </div>
       )}
@@ -226,77 +247,3 @@ const MiddleSection = () => {
 };
 
 export default MiddleSection;
-
-const ChatMessage = (message: ChatMessage) => {
-  const { currentTheme } = useTheme();
-  const isAgentMessage = message.user === "ai";
-  const isDataPresent = message.jobData != undefined;
-  return (
-    <div
-      className={`flex ${
-        isAgentMessage ? "justify-start items-start" : "justify-end items-end"
-      }`}
-    >
-      {isAgentMessage && (
-        <div className="mt-3 flex-none">
-          <img
-            src={XzayognLogo}
-            alt=""
-            className="h-7 w-7 min-w-[32px] min-h-[32px] object-contain"
-          />
-        </div>
-        // <div className="mt-3 h-8 w-8 py-1 font-bold flex items-center justify-center  overflow-visible">
-        //   <img src={XzayognLogo} alt="" className="h-8 w-8 object-contain" />
-        // </div>
-      )}
-      <div
-        className={`py-3 px-2 text-base ${
-          isAgentMessage
-            ? "rounded-none max-w-3xl"
-            : "py-3 px-5 rounded-2xl rounded-tr-none max-w-2xl "
-        }
-          
-          `}
-        style={{
-          backgroundColor: isAgentMessage
-            ? currentTheme.agentMessageBg
-            : currentTheme.userMessageBg,
-        }}
-      >
-        <p className="text-left">{message.message}</p>
-        {isAgentMessage && isDataPresent && (
-          <div className="grid lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1 gap-[1rem] my-3 w-full">
-            {/* {Array(6)
-              .fill(0)
-              .map((_, index) => (
-                <div key={index} className="flex">
-                  <JobCard
-                    key={index}
-                    title={"Software Developer"}
-                    company={"Google"}
-                    duration={"2 Months"}
-                    location={"Mumbai, India"}
-                    salary={"15000/Month"}
-                    postedDate={"2025-02-03T12:30:00"}
-                    applyUrl={"#"}
-                  />
-                </div>
-              ))} */}
-            {message.jobData.map((job: any, index: number) => (
-              // <JobCard
-              <JobCard
-                key={index}
-                // title={"Software Developer role frontend backend senior II"}
-                title={job.title}
-                company={job.company}
-                location={job.location}
-                postedDate="2025-02-02T12:30:00"
-                applyUrl={job.url}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
