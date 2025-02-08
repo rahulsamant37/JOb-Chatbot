@@ -17,7 +17,7 @@ class QueryProcessor:
         self.conversational_prefixes = [
             "i'm", "i am", "looking for", "show me", "find me", "searching for",
             "need", "want", "some", "please", "help me find", "can you find",
-            "interested in", "seeking", "hunting for", "searching for"
+            "interested in", "seeking", "hunting for"
         ]
         
         self.experience_levels = {
@@ -49,7 +49,9 @@ class QueryProcessor:
     def is_job_related_query(self, text: str) -> bool:
         """Determine if the query is job-related"""
         text_lower = text.lower()
-        words = set(text_lower.split())
+        # Process the text with spaCy to use lemmatization (catches plural and variant forms)
+        doc = self.nlp(text_lower)
+        words = {token.lemma_ for token in doc}
         if any(term in words for term in self.job_related_terms):
             return True
 
