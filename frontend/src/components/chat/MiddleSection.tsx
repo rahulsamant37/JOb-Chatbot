@@ -173,7 +173,7 @@ const MiddleSection = () => {
       {isChatLogEmpty && (
         <div className="mb-6 flex items-center justify-center gap-5 ">
           <img src={XzayognLogo} alt="" className="h-11 w-11" />
-          <h3 className="text-3xl pb-1.5">hey i am xzayogn</h3>
+          <h3 className="text-3xl pb-1.5">Hey I am Xzayogn</h3>
         </div>
       )}
 
