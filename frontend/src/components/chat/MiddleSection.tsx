@@ -13,7 +13,7 @@ const MiddleSection = () => {
   const [isChatLogEmpty, setIsChatLogEmpty] = useState<boolean>(true);
   const chatLogRef = useRef<HTMLDivElement>(null); // Add ref for chat container
 
-  const API_URL = "http://localhost:8000/search"; // server end-point
+  const API_URL = "http://100.24.36.188/search"; // server end-point
 
   useEffect(() => {
     setIsChatLogEmpty(chatLog.length === 0);
